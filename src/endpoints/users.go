@@ -42,18 +42,21 @@ func GetUserByID(c echo.Context) error {
 }
 
 func CreateUser(c echo.Context) error {
-	// Parse request body
-	req := new(models.User)
-	if err := c.Bind(req); err != nil {
+	// Extract form data
+	name := c.FormValue("name")
+	email := c.FormValue("email")
+	password := c.FormValue("password")
+	role := c.FormValue("role")
+	categoryID, err := strconv.Atoi(c.FormValue("category_id"))
+	if err != nil {
 		return err
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	req.Password = string(hashedPassword)
 
 	// Upload picture
 	file, err := c.FormFile("picture")
@@ -88,42 +91,48 @@ func CreateUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save picture"})
 	}
 
-	// Set picture URL
-	req.PictureUrl = picturePath
+	// Create user object
+	user := &models.User{
+		Name:       name,
+		Email:      email,
+		Password:   string(hashedPassword),
+		PictureUrl: picturePath,
+		CategoryId: categoryID,
+		Role:       role,
+	}
 
 	// Save user to database
-	if err := infra.DB().Create(req).Error; err != nil {
+	if err := infra.DB().Create(user).Error; err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, req)
+	return c.JSON(http.StatusCreated, user)
 }
 
 func UpdateUser(c echo.Context) error {
-	// Extract user ID from JWT token
-	userID := c.Get("user").(int)
+	// Extract user ID from route parameter
+	requestedUserIDStr := c.Param("id")
+	requestedUserID, err := strconv.Atoi(requestedUserIDStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid user ID"})
+	}
 
-	// Parse request body
-	req := new(models.User)
-	if err := c.Bind(req); err != nil {
+	// Extract form data
+	name := c.FormValue("name")
+	email := c.FormValue("email")
+	password := c.FormValue("password")
+	categoryID, err := strconv.Atoi(c.FormValue("category_id"))
+	if err != nil {
 		return err
 	}
 
-	// Only allow admin to update other users
-	if req.Id != userID {
-		role := c.Get("role").(string)
-		if role != "Admin" {
-			return echo.ErrForbidden
-		}
-	}
-
 	// Hash password if provided
-	if req.Password != "" {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if password != "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
-		req.Password = string(hashedPassword)
+		password = string(hashedPassword)
 	}
 
 	// Upload picture
@@ -159,15 +168,25 @@ func UpdateUser(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save picture"})
 	}
 
-	// Set picture URL
-	req.PictureUrl = picturePath
+	// Find user in database
+	var user models.User
+	if err := infra.DB().First(&user, requestedUserID).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+	}
 
-	// Update user in database
-	if err := infra.DB().Save(req).Error; err != nil {
+	// Update user data
+	user.Name = name
+	user.Email = email
+	user.Password = password
+	user.PictureUrl = picturePath
+	user.CategoryId = categoryID
+
+	// Save updated user to database
+	if err := infra.DB().Save(&user).Error; err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, req)
+	return c.JSON(http.StatusOK, user)
 }
 
 // DeleteUserByID deletes a user by ID (admin only)

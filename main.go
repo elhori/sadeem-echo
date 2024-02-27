@@ -41,7 +41,7 @@ func main() {
 	authGroup.GET("/user_categories/search", endpoints.SearchUserCategories)
 
 	authGroup.GET("/users", endpoints.GetAllUsers, infra.AuthorizationMiddleware("Admin"))
-	authGroup.GET("/users/:id", endpoints.GetUserByID)
+	authGroup.GET("/users/get", endpoints.GetUserByID)
 	authGroup.POST("/users", endpoints.CreateUser, infra.AuthorizationMiddleware("Admin"))
 	authGroup.PUT("/users/:id", endpoints.UpdateUser, infra.AuthorizationMiddleware("Admin"))
 	authGroup.DELETE("/users/:id", endpoints.DeleteUserByID, infra.AuthorizationMiddleware("Admin"))
