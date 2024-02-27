@@ -8,10 +8,11 @@ import (
 
 var jwtSecret = []byte("your_jwt_secret")
 
-func GenerateToken(userID int) (string, error) {
+func GenerateToken(userID int, role string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["id"] = userID
+	claims["role"] = role
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // Token expires in 24 hours
 
 	tokenString, err := token.SignedString(jwtSecret)

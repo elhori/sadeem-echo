@@ -34,8 +34,14 @@ func AuthenticationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.ErrUnauthorized
 		}
 
+		role, ok := claims["role"].(string)
+		if !ok {
+			return echo.ErrUnauthorized
+		}
+
 		// Pass userID to context for later use
 		c.Set("user", int(userID))
+		c.Set("role", role)
 
 		return next(c)
 	}

@@ -32,7 +32,7 @@ func Login(c echo.Context) error {
 	}
 
 	// Generate JWT token
-	token, err := infra.GenerateToken(user.Id)
+	token, err := infra.GenerateToken(user.Id, user.Role)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func Register(c echo.Context) error {
 	}
 
 	// Generate JWT token
-	token, err := infra.GenerateToken(req.Id)
+	token, err := infra.GenerateToken(req.Id, req.Role)
 	if err != nil {
 		return err
 	}
