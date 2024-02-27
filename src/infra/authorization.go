@@ -1,48 +1,42 @@
 package infra
 
-import (
-	"strings"
+import "github.com/labstack/echo/v4"
 
-	"github.com/labstack/echo/v4"
-)
+func AuthorizationMiddleware(roles ...string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			userRole := c.Get("role").(string)
+			for _, role := range roles {
+				if userRole == role {
+					return next(c)
+				}
+			}
+			return echo.ErrForbidden
+		}
+	}
+}
 
-func JWTAuth(next echo.HandlerFunc) echo.HandlerFunc {
+func AuthenticationMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
-		// Extract the token from the Authorization header
 		token := c.Request().Header.Get("Authorization")
 		if token == "" {
 			return echo.ErrUnauthorized
 		}
 
-		// Check if the token has the correct format
-		parts := strings.Split(token, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return echo.ErrUnauthorized
-		}
-
-		// Validate JWT token
-		claims, err := ParseToken(parts[1])
+		claims, err := ParseToken(token)
 		if err != nil {
 			return echo.ErrUnauthorized
 		}
 
-		// Extract user ID from claims
-		userIDFloat, ok := claims["id"].(float64)
+		// Safely perform type assertion for user ID
+		userID, ok := claims["id"].(float64)
 		if !ok {
 			return echo.ErrUnauthorized
 		}
-		userID := int(userIDFloat)
 
-		// Set user ID in context
-		c.Set("user", userID)
+		// Pass userID to context for later use
+		c.Set("user", int(userID))
 
-		// Call the next handler
-		if err := next(c); err != nil {
-			// Handle any errors returned by the next handler
-			c.Error(err)
-			return err
-		}
-
-		return nil
+		return next(c)
 	}
 }
