@@ -40,6 +40,10 @@ func Login(c echo.Context) error {
 	// Set token in user object
 	user.Token = token
 
+	c.Set("role", user.Role)
+	c.Set("token", user.Token)
+	//c.Set("user", user)
+
 	return c.JSON(http.StatusOK, user)
 }
 

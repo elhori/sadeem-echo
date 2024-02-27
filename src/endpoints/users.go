@@ -1,11 +1,14 @@
 package endpoints
 
 import (
+	"io"
 	"net/http"
-	"strconv"
-
+	"os"
+	"path/filepath"
 	"sadeem-echo/src/infra"
 	"sadeem-echo/src/models"
+	"strconv"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
@@ -38,7 +41,6 @@ func GetUserByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-// CreateUser creates a new user (admin only)
 func CreateUser(c echo.Context) error {
 	// Parse request body
 	req := new(models.User)
@@ -53,6 +55,42 @@ func CreateUser(c echo.Context) error {
 	}
 	req.Password = string(hashedPassword)
 
+	// Upload picture
+	file, err := c.FormFile("picture")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to upload picture"})
+	}
+
+	// Create a directory if it doesn't exist
+	err = os.MkdirAll("uploads", os.ModePerm)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create directory"})
+	}
+
+	// Generate file path
+	ext := filepath.Ext(file.Filename)
+	picturePath := "uploads/" + strconv.FormatInt(time.Now().Unix(), 10) + ext
+
+	// Save uploaded file to the server
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to open uploaded file"})
+	}
+	defer src.Close()
+
+	dst, err := os.Create(picturePath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create picture file"})
+	}
+	defer dst.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save picture"})
+	}
+
+	// Set picture URL
+	req.PictureUrl = picturePath
+
 	// Save user to database
 	if err := infra.DB().Create(req).Error; err != nil {
 		return err
@@ -61,7 +99,6 @@ func CreateUser(c echo.Context) error {
 	return c.JSON(http.StatusCreated, req)
 }
 
-// UpdateUser updates a user (admin or self)
 func UpdateUser(c echo.Context) error {
 	// Extract user ID from JWT token
 	userID := c.Get("user").(int)
@@ -89,6 +126,42 @@ func UpdateUser(c echo.Context) error {
 		req.Password = string(hashedPassword)
 	}
 
+	// Upload picture
+	file, err := c.FormFile("picture")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Failed to upload picture"})
+	}
+
+	// Create a directory if it doesn't exist
+	err = os.MkdirAll("uploads", os.ModePerm)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create directory"})
+	}
+
+	// Generate file path
+	ext := filepath.Ext(file.Filename)
+	picturePath := "uploads/" + strconv.FormatInt(time.Now().Unix(), 10) + ext
+
+	// Save uploaded file to the server
+	src, err := file.Open()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to open uploaded file"})
+	}
+	defer src.Close()
+
+	dst, err := os.Create(picturePath)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create picture file"})
+	}
+	defer dst.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to save picture"})
+	}
+
+	// Set picture URL
+	req.PictureUrl = picturePath
+
 	// Update user in database
 	if err := infra.DB().Save(req).Error; err != nil {
 		return err
@@ -106,7 +179,7 @@ func DeleteUserByID(c echo.Context) error {
 	}
 
 	// Extract user ID from JWT token
-	currentUserID := c.Get("user").(uint)
+	currentUserID := c.Get("user").(int)
 
 	// Only allow admin to delete users
 	role := c.Get("role").(string)
@@ -115,7 +188,7 @@ func DeleteUserByID(c echo.Context) error {
 	}
 
 	// Do not allow admin to delete itself
-	if uint(userID) == currentUserID {
+	if int(userID) == currentUserID {
 		return echo.ErrForbidden
 	}
 
@@ -129,12 +202,6 @@ func DeleteUserByID(c echo.Context) error {
 
 // SearchUsers searches users based on query parameters (admin only)
 func SearchUsers(c echo.Context) error {
-	// Only allow admin to search users
-	role := c.Get("role").(string)
-	if role != "Admin" {
-		return echo.ErrForbidden
-	}
-
 	// Parse query parameters
 	page, err := strconv.Atoi(c.QueryParam("currentPage"))
 	if err != nil || page < 1 {
@@ -161,12 +228,6 @@ func SearchUsers(c echo.Context) error {
 }
 
 func GetAllUsers(c echo.Context) error {
-	// Only allow admin to access all users
-	role := c.Get("role").(string)
-	if role != "Admin" {
-		return echo.ErrForbidden
-	}
-
 	// Parse query parameters
 	page, err := strconv.Atoi(c.QueryParam("currentPage"))
 	if err != nil || page < 1 {

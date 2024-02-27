@@ -8,12 +8,13 @@ import (
 
 func JWTAuth(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
+		// Extract the token from the Authorization header
 		token := c.Request().Header.Get("Authorization")
 		if token == "" {
 			return echo.ErrUnauthorized
 		}
 
-		// Split token header, e.g., "Bearer tokenString"
+		// Check if the token has the correct format
 		parts := strings.Split(token, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			return echo.ErrUnauthorized
@@ -25,28 +26,23 @@ func JWTAuth(next echo.HandlerFunc) echo.HandlerFunc {
 			return echo.ErrUnauthorized
 		}
 
+		// Extract user ID from claims
+		userIDFloat, ok := claims["id"].(float64)
+		if !ok {
+			return echo.ErrUnauthorized
+		}
+		userID := int(userIDFloat)
+
 		// Set user ID in context
-		userID := uint(claims["id"].(float64))
 		c.Set("user", userID)
 
-		return next(c)
-	}
-}
-
-func AuthorizeRoles(roles ...string) echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			// Get user role from context
-			userRole := c.Get("role").(string)
-
-			// Check if user role is authorized
-			for _, role := range roles {
-				if userRole == role {
-					return next(c)
-				}
-			}
-
-			return echo.ErrForbidden
+		// Call the next handler
+		if err := next(c); err != nil {
+			// Handle any errors returned by the next handler
+			c.Error(err)
+			return err
 		}
+
+		return nil
 	}
 }
