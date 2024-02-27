@@ -20,19 +20,19 @@ func main() {
 
 	dbGorm.Ping()
 
-	e.GET("/tags", endpoints.GetAllTags)
-	e.GET("/tags/:id", endpoints.GetTagByID)
-	e.POST("/tags", endpoints.CreateTag)
-	e.PUT("/tags/:id", endpoints.UpdateTag)
-	e.DELETE("/tags/:id", endpoints.DeleteTagByID)
-	e.GET("/tags/search", endpoints.SearchTags)
+	e.GET("/tags", endpoints.GetAllTags, infra.JWTAuth, infra.AuthorizeRoles("Admin", "Default"))
+	e.GET("/tags/:id", endpoints.GetTagByID, infra.JWTAuth, infra.AuthorizeRoles("Admin", "Default"))
+	e.POST("/tags", endpoints.CreateTag, infra.JWTAuth, infra.AuthorizeRoles("Admin"))
+	e.PUT("/tags/:id", endpoints.UpdateTag, infra.JWTAuth, infra.AuthorizeRoles("Admin"))
+	e.DELETE("/tags/:id", endpoints.DeleteTagByID, infra.JWTAuth, infra.AuthorizeRoles("Admin"))
+	e.GET("/tags/search", endpoints.SearchTags, infra.JWTAuth, infra.AuthorizeRoles("Admin", "Default"))
 
-	e.GET("/user_categories", endpoints.GetAllUserCategories)
-	e.GET("/user_categories/:id", endpoints.GetUserCategoryByID)
-	e.POST("/user_categories", endpoints.CreateUserCategory)
-	e.PUT("/user_categories/:id", endpoints.UpdateUserCategory)
-	e.DELETE("/user_categories/:id", endpoints.DeleteUserCategoryByID)
-	e.GET("/user_categories/search", endpoints.SearchUserCategories)
+	e.GET("/user_categories", endpoints.GetAllUserCategories, infra.JWTAuth, infra.AuthorizeRoles("Admin", "Default"))
+	e.GET("/user_categories/:id", endpoints.GetUserCategoryByID, infra.JWTAuth, infra.AuthorizeRoles("Admin", "Default"))
+	e.POST("/user_categories", endpoints.CreateUserCategory, infra.JWTAuth, infra.AuthorizeRoles("Admin"))
+	e.PUT("/user_categories/:id", endpoints.UpdateUserCategory, infra.JWTAuth, infra.AuthorizeRoles("Admin"))
+	e.DELETE("/user_categories/:id", endpoints.DeleteUserCategoryByID, infra.JWTAuth, infra.AuthorizeRoles("Admin"))
+	e.GET("/user_categories/search", endpoints.SearchUserCategories, infra.JWTAuth, infra.AuthorizeRoles("Admin", "Default"))
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
